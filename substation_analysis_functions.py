@@ -11,18 +11,51 @@ from sklearn.decomposition import PCA
 from skfuzzy.cluster import cmeans as FuzzyCMeans
 from sklearn.mixture import GaussianMixture
 import seaborn as sns
-
+import os
 from scipy.spatial.distance import cdist
+
+
+
+
 
 ######################################################################
 ############################## Data Cleaning ######################
 ######################################################################
 
+def read_substation_data(folder_path):
+
+    # Create an empty dictionary to store the dataframes
+    dataframes = {}
+
+    # Iterate through all files in the folder
+    for file_name in os.listdir(folder_path):
+        # Check if the file is a CSV file
+        if file_name.endswith(".csv"):
+            print(file_name, '\n')
+            # Extract the substation name from the file name
+            substation_name = file_name.split(" ")[2:]
+            substation_name = substation_name[:substation_name.index("POWER")]
+            substation_name = " ".join(substation_name)
+            
+            # Read the CSV file into a pandas dataframe
+            df = pd.read_csv(os.path.join(folder_path, file_name))
+            # Convert date column to datetime -- using this as opportunity to skip over empty dataframes (if you don't want this, add "errors = 'ignore'" to the to_datetime command)
+            try:
+                df['Datetime'] = pd.to_datetime(df['Date (Dublin. Edinburgh. Lisbon. London)'], format = '%d/%m/%Y %H:%M:%S') 
+            except TypeError:
+                df['Datetime'] = pd.to_datetime(df['Date (Dublin. Edinburgh. Lisbon. London)'])
+            
+            # Drop old date column 
+            df.drop('Date (Dublin. Edinburgh. Lisbon. London)', axis=1, inplace=True)
+            # Add the dataframe to the dictionary with the substation ID as the key
+            dataframes[substation_name] = df
+
+    return dataframes
+
+
 def handle_missing_vals(dataframes, threshold):
     '''
-    Input: Dictionary of dataframes of substation time series data with active power values
     Removes all substations that are missing > threshold % of their active power data
-    Output: Dictionary
     '''
     substations_below_threshold = []
     for substation, df in dataframes.items():
@@ -34,14 +67,11 @@ def handle_missing_vals(dataframes, threshold):
         print(f"Substation {substation} has less than 50% available active power data. Dropping from dataframe.")
         del dataframes[substation]
 
-
-    return dataframes   
+    return dataframes 
 
 def detect_bad_power_vals(df, active_upper_threshold = 700, active_lower_threshold = 0, reactive_upper_threshold = 250, reactive_lower_threshold = -100):
     '''
-    Input: Dataframe with time series Active Power and Reactive Power data
     Removes dataframe dates with Active Power or Reactive Power data outside of the thresholds
-    Output: Dataframe
     '''
     # Find Active Power values over 1500 kW
     bad_vals = df[(df['Active Power [kW]'] > active_upper_threshold) | (df['Active Power [kW]'] < active_lower_threshold) | (df['Reactive Power [kVAr]'] > reactive_upper_threshold) | (df['Reactive Power [kVAr]'] < reactive_lower_threshold)]
@@ -54,7 +84,6 @@ def detect_bad_power_vals(df, active_upper_threshold = 700, active_lower_thresho
 
 def split_by_season(df):
     ''' 
-    Input: Dataframe with time series data
     Output: Dataframe with time series data split into seasons
     '''
     df['Datetime'] = pd.to_datetime(df['Datetime'])
@@ -69,7 +98,6 @@ def split_by_season(df):
 
 def split_weekend_week(df):
     ''' 
-    Input: dataframe with time series data
     Output: two dataframes, one with weekday data and one with weekend data
     '''
     df['weekday'] = df['Datetime'].dt.weekday
@@ -515,10 +543,6 @@ def pca_plot(df):
     plt.ylabel('Cumulative Explained Variance')
     plt.ylim(0,1.0)
     plt.show()
-    for key in df_dict:
-        print(key)
-        df = df_dict[key].set_index('substation')
-        pca_plot(df)
         
     
     
@@ -676,19 +700,19 @@ def k_means(df, k_values = range(2,11), active_only = False):
         # Save clustering results
         results[k] = labels  
 
-    # # Plot elbow curve
-    # plt.plot(k_values, wss)
-    # plt.xlabel('Number of clusters (k)')
-    # plt.ylabel('WSS')
-    # plt.title('Elbow Curve')
-    # plt.show()
+    # Plot elbow curve
+    plt.plot(k_values, wss)
+    plt.xlabel('Number of clusters (k)')
+    plt.ylabel('WSS')
+    plt.title('Elbow Curve')
+    plt.show()
 
-    # # Plot the silhouette scores and DBI for each k value
-    # fig, ax = plt.subplots(2, 1, figsize=(10,10))
-    # ax[0].plot(k_values, silhouette_scores)
-    # ax[0].set_xlabel('Number of clusters (k)')
-    # ax[0].set_ylabel('Silhouette score')
-    # ax[0].set_title('Silhouette score for k-means clustering')
+    # Plot the silhouette scores and DBI for each k value
+    fig, ax = plt.subplots(2, 1, figsize=(10,10))
+    ax[0].plot(k_values, silhouette_scores)
+    ax[0].set_xlabel('Number of clusters (k)')
+    ax[0].set_ylabel('Silhouette score')
+    ax[0].set_title('Silhouette score for k-means clustering')
     ax[1].plot(k_values, dbi_scores)
     ax[1].set_xlabel('Number of clusters (k)')
     ax[1].set_ylabel('DBI')
@@ -696,3 +720,34 @@ def k_means(df, k_values = range(2,11), active_only = False):
     plt.show()
     
     return df, results#, cluster_centers
+
+
+######################################################################
+############################## Land Use Analysis #####################
+######################################################################
+
+
+def find_nearest_substation(df1, df2, threshold_distance):
+    """
+    Given two dataframes, df1 with columns ['Latitude', Longitude'] and an index 'Substation',
+    and df2 with columns ['Land Uses', 'Latitude', 'Longitude'], returns a dataframe with
+    columns ['Land Uses', 'Latitude', 'Longitude', 'Nearest Substation'], where
+    'Nearest Substation' is the index of the nearest substation in df1 for each 'Land Uses'
+    observation.
+    """
+    # calculate distances between all pairs of coordinates
+    distances = cdist(df1[['Latitude', 'Longitude']], df2[['Latitude', 'Longitude']])
+
+    # find the nearest substation for each 'Land Use' observation
+    nearest_substations = df1.index[np.argmin(distances, axis=0)]
+    nearest_substation_distances = np.min(distances, axis=0)
+
+    # add 'Nearest Substation' column to df2
+    df2['substation'] = nearest_substations
+    df2['Nearest Substation Distance'] = nearest_substation_distances
+    df2 = df2[df2['Nearest Substation Distance'] < threshold_distance] # only keep observations within threshold distance (km) of a substation
+
+    df_count = pd.crosstab(index=df2['substation'], columns=df2['Land Uses'], normalize = 'index')
+
+    
+    return df2, df_count
