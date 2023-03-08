@@ -193,7 +193,7 @@ def plot_peak_hour_distributions(dataframes, active):
 
 
 
-def extract_global_features_v3(substation, df, active = True):
+def extract_global_features_v3(substation, df, active = False):
     '''
     Input: name of substation, and the dataframe of the substation's time series data
     Compute global features for the substation's time series data for active and reactive power
@@ -493,7 +493,7 @@ def split_into_seasonal_dfs(features_dataframes, global_active_features, global_
     # Create an empty dictionary to hold the dataframes
     df_dict = {}
     PCA_clustering = True
-    if PCA_clustering: # If we're doing PCA clusteirng, we are using large feature set, otherwise using smaller feature set for greater interpretability 
+    if PCA_clustering: # If we're doing PCA clustering, we are using large feature set, otherwise using smaller feature set for greater interpretability 
         feature_set = ['substation'] + active_and_reactive_features
     else:
         feature_set = ['substation'] + [global_active_features[i] for i in [0,7,8]] + [global_reactive_features[i] for i in [0,7,8]] + peak_features
