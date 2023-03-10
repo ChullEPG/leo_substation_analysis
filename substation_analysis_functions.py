@@ -236,7 +236,6 @@ def extract_global_features_v3(substation, df, active = False):
         above_mean_counts = [(df[(df['Date'] == date) & (df[feature_of_interest] > mean)]).shape[0] for date, mean in mean_powers.iteritems()]
         percentage_above_mean = [above_mean_count / 24 * 100 for i, above_mean_count in enumerate(above_mean_counts)]
 
-
         if feature_of_interest=='Reactive Power [kVAr]':
             hot_vals = [(df[(df['Date'] == date) & (abs(df[feature_of_interest]) > 1.25 * abs(mean))]).shape[0] for date, mean in mean_powers.iteritems()]
             cold_vals = [(df[(df['Date'] == date) & (abs(df[feature_of_interest]) < 0.75 * abs(mean))]).shape[0] for date, mean in mean_powers.iteritems()]
@@ -245,8 +244,6 @@ def extract_global_features_v3(substation, df, active = False):
             hot_vals = [(df[(df['Date'] == date) & (df[feature_of_interest] > 1.25 * mean)]).shape[0] for date, mean in mean_powers.iteritems()]
             # Numer of hours below 0.75 * mean value in each day
             cold_vals = [(df[(df['Date'] == date) & (df[feature_of_interest] < 0.75 * mean)]).shape[0] for date, mean in mean_powers.iteritems()]
-            
-            
 
         # Filter the dataframe to include only the hours between 9 and 17
         filtered_business_hours = df[(df['Hour'] >= 9) & (df['Hour'] <= 18)]
@@ -277,7 +274,7 @@ def extract_global_features_v3(substation, df, active = False):
                 f'SD of daily load pattern {feature_of_interest}': sd_powers.mean(),
                 f'Max power consumption during a day {feature_of_interest}': max_powers.max(),
                 f'Min power consumption during a day {feature_of_interest}': min_powers.min(),
-                f'Range of power consumption during a day (max - min) {feature_of_interest}': range_powers.max(),
+                f'Range of power consumption during a day (max - min) {feature_of_interest}': range_powers.mean(),
                 f'Percent values above mean val (%) {feature_of_interest}': statistics.mean(percentage_above_mean),
                 f'Number of hours above 1.25 * mean val {feature_of_interest}': statistics.mean(hot_vals),
                 f'Number of hours below 0.75 * mean val {feature_of_interest}': statistics.mean(cold_vals),
@@ -294,7 +291,7 @@ def extract_global_features_v3(substation, df, active = False):
                 f'SD of daily load pattern {feature_of_interest}': sd_powers.mean(),
                 f'Max power consumption during a day {feature_of_interest}': max_powers.max(),
                 f'Min power consumption during a day {feature_of_interest}': min_powers.min(),
-                f'Range of power consumption during a day (max - min) {feature_of_interest}': range_powers.max(),
+                f'Range of power consumption during a day (max - min) {feature_of_interest}': range_powers.mean(),
                 f'Percent values above mean val (%) {feature_of_interest}': statistics.mean(percentage_above_mean),
                 f'Number of hours above 1.25 * mean val {feature_of_interest}': statistics.mean(hot_vals),
                 f'Number of hours below 0.75 * mean val {feature_of_interest}': statistics.mean(cold_vals),
