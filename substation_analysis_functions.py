@@ -26,6 +26,9 @@ def read_substation_data(folder_path):
 
     # Create an empty dictionary to store the dataframes
     dataframes = {}
+    
+    # Create an empty list to store the substation, ID pairs
+    substation_IDs = []
 
     # Iterate through all files in the folder
     for file_name in os.listdir(folder_path):
@@ -36,6 +39,9 @@ def read_substation_data(folder_path):
             substation_name = file_name.split(" ")[2:]
             substation_name = substation_name[:substation_name.index("POWER")]
             substation_name = " ".join(substation_name)
+            
+            # Extract the substation ID from the file name 
+            substation_ID = file_name.split(" ")[1:][0]
             
             # Read the CSV file into a pandas dataframe
             df = pd.read_csv(os.path.join(folder_path, file_name))
@@ -49,8 +55,10 @@ def read_substation_data(folder_path):
             df.drop('Date (Dublin. Edinburgh. Lisbon. London)', axis=1, inplace=True)
             # Add the dataframe to the dictionary with the substation ID as the key
             dataframes[substation_name] = df
+            
+            substation_IDs += [(substation_name, int(substation_ID))]
 
-    return dataframes
+    return dataframes, pd.DataFrame(substation_IDs, columns = ['Substation', 'ID'])
 
 
 def handle_missing_vals(dataframes, threshold):
@@ -744,7 +752,7 @@ def find_nearest_substation(df1, df2, threshold_distance):
     df2['Nearest Substation Distance'] = nearest_substation_distances
     df2 = df2[df2['Nearest Substation Distance'] < threshold_distance] # only keep observations within threshold distance (km) of a substation
 
-    df_count = pd.crosstab(index=df2['substation'], columns=df2['Land Uses'], normalize = 'index')
+    df_count = pd.crosstab(index=df2['substation'], columns=df2['Land Uses'])
 
     
     return df2, df_count
