@@ -526,7 +526,7 @@ def split_into_seasonal_dfs(features_dataframes, global_active_features, global_
 ############################## Dimensionality Reduction ##############
 ######################################################################
 
-def pca_plot(df):
+def pca_plot(df, key):
     '''
     Input: Seasonal/time-of-week dataframe with all substations and features extracted
     Plot scree plot
@@ -543,10 +543,11 @@ def pca_plot(df):
 
     plt.figure(figsize = (5,4))
     plt.plot(range(len(pca.explained_variance_ratio_)), pca.explained_variance_ratio_.cumsum(), marker = 'o', linestyle = '--')
-    plt.title('Explained Variance by Components')
-    plt.xlabel('Number of Components*')
+    #plt.title(f'Explained Variance by # Components for \'week\'/\'spring\'')
+    plt.xlabel('Number of Components')
     plt.ylabel('Cumulative Explained Variance')
-    plt.ylim(0,1.0)
+    plt.savefig('figures/PCA_scree_plot.png')
+    #plt.ylim(0.90,1.0)
     plt.show()
         
     
@@ -672,7 +673,7 @@ def k_means(df, k_values = range(2,11), active_only = False):
     else:
         # Get the feature set - all features
         X = df.loc[:, df.columns != 'substation'].values
-
+    print(df.columns)
     # Create an empty list to hold the silhouette scores and DBI and elbow cost
     silhouette_scores = []
     dbi_scores = []
@@ -709,7 +710,8 @@ def k_means(df, k_values = range(2,11), active_only = False):
     plt.plot(k_values, wss)
     plt.xlabel('Number of clusters (k)')
     plt.ylabel('WSS')
-    plt.title('Elbow Curve')
+    plt.title('')
+    plt.savefig("figures/report/elbow.png")
     plt.show()
 
     # Plot the silhouette scores and DBI for each k value
